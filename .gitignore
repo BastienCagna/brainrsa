@@ -1,0 +1,7 @@
+l.*
+_*
+local*
+*~
+*.egg-info
+/doc/auto_examples
+/doc/generated
