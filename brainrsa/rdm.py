@@ -175,6 +175,71 @@ def _check_rdm(rdm, force="matrix", sigtri="both", include_diag=False,
     return rdm
        
 
+def estimate_rdms(X, distance='euclidean', n_jobs=1, verbose=0):
+    """ Compute a RDM for if set of value of X
+    
+    Return
+    ======
+    rdms:
+        Nbr seed x Nbr elements
+    """
+    n_seeds = len(X)
+    
+    start_t = time.time()
+
+    group_iter = GroupIterator(n_seeds, n_jobs)
+    rdms = Parallel(n_jobs=n_jobs, verbose=verbose)(
+        delayed(_group_iter_rdm)(
+            X, seed_list, distance, thread_id, n_seeds, max(0, verbose-1))
+        for thread_id, seed_list in enumerate(group_iter)
+    )
+    rdms = np.concatenate(rdms)
+
+    if verbose:
+        dt = time.time() - start_t
+        print("Elapsed time for RDMs computation: {:.01f}s".format(dt))
+    return np.array(rdms)
+
+
+def _group_iter_rdm(X, seed_list, distance, thread_id, total, verbose=0):
+    rdms = []
+    for s in seed_list:
+        rdms.append(_rdm_job(X[s], distance, s, total, verbose))
+    return rdms
+
+
+def _rdm_job(Xseed, distance, seed_id, total, verbose=0):
+    """ Compute RDM
+    
+    The dissimilarity can be computed with various metrics as euclidean
+    distance or spearman (pearson ranked) correlation.
+    """
+    ncond = Xseed.shape[1]
+    nvoxels = Xseed.shape[2]
+    
+    # TODO: add cross validation here ?
+    # Average all runs
+    Xmean = np.mean(Xseed, axis=0)
+    
+    if verbose:
+        print("sphere {}/{} has {} values".format(seed_id, total, n_voxels))
+
+    # Rank values for each beta to speed up the computation
+    if distance == "spearmanr":
+        Xmean = np.argsort(Xmean, axis=1)
+        distance = "pearsonr"
+
+    n_elem = tri_num(ncond-1)
+    rdm_v = np.empty((n_elem,), dtype=float)
+    i_elem = 0
+    for i in range(ncond-1):
+        for j in range(i+1, ncond):
+            rdm_v[i_elem] = cross_vect_score(Xmean[i], Xmean[j], distance)
+            i_elem += 1
+    return rdm_v
+
+
+
 def normalized_rdm(rdm, norm, vmin, vmax):
     """
 
@@ -207,29 +272,7 @@ def normalized_rdm(rdm, norm, vmin, vmax):
         
 
 #### CONSTRUCT RDM
-def cross_vect_score(rdm_a, rdm_b, scoring='euclidean'):
-    """
-        TODO: add doc !
-    """
-    #print(rdm_a.shape, rdm_b.shape)
-    if scoring == 'euclidean':
-        score = np.mean(rdm_b - rdm_a)
-    elif scoring in ['correlation', "correlation_dist"]:
-        a = np.sqrt(np.sum(np.power(rdm_a, 2)))
-        b = np.sqrt(np.sum(np.power(rdm_b, 2)))
-        score = np.dot(rdm_a, rdm_b) / (a * b)
-    elif scoring in ["spearmanr", "spearmanr_dist"]:
-        # Warning: ranking takes time, it's faster to input ranked vectors and
-        # use pearsonr distance when doing multiple test on same vectors
-        score, _ = spearmanr(rdm_a, rdm_b)
-    elif scoring == "pearsonr":
-        score, _ = pearsonr(rdm_a, rdm_b)
-    else:
-        raise ValueError("Unknown scoring function")
 
-    if scoring[-5:] == "_dist":
-        return 1 - score
-    return score
 
 
 def age_model_rdm(participant_tsv):

@@ -1,4 +1,7 @@
 import numpy as np
+import nibabel as nb
+
+from nilearn.image import new_img_like
 
 
 ################# UTILS ########################################################
@@ -34,4 +37,42 @@ def root_tri_num(t):
 #        in_str = in_str.replace("[" + k + "]", val)
 #    return in_str
 
+
+def check_mask(mask_f, out_f=None, threshold=0.0):
+    mask = nb.load(mask_f) if isinstance(mask_f, str) else mask_f
+    dt = np.array(mask.dataobj)
+    if len(np.unique(dt)) > 2:
+        dt[dt <= threshold] = 0
+        dt[dt > threshold] = 1
+    mask = new_img_like(mask, dt)
+    if out_f:
+        nb.save(mask, out_f)
+    return mask
+
+
+class GroupIterator(object):
+    """Group iterator
+
+    Provides group of features for search_light loop
+    that may be used with Parallel.
+
+    Parameters
+    ----------
+    n_features : int
+        Total number of features
+
+    n_jobs : int, optional
+        The number of CPUs to use to do the computation. -1 means
+        'all CPUs'. Defaut is 1
+    """
+    def __init__(self, n_features, n_jobs=1):
+        self.n_features = n_features
+        if n_jobs == -1:
+            n_jobs = cpu_count()
+        self.n_jobs = n_jobs
+
+    def __iter__(self):
+        split = np.array_split(np.arange(self.n_features), self.n_jobs)
+        for list_i in split:
+            yield list_i
 

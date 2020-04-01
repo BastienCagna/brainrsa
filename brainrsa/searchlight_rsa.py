@@ -6,202 +6,23 @@
 # Authors : Bastien Cagna (bastien.cagna@univ-amu.fr)
 
 import warnings
-import random
 import numpy as np
 import pandas as pd
-import h5py
-import matplotlib.pyplot as plt
-
-from sklearn.externals.joblib import Parallel, delayed, cpu_count
+from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator
-from sklearn.exceptions import ConvergenceWarning
-
-from scipy.stats.mstats import spearmanr, rankdata
-from scipy.stats import pearsonr
-from scipy.sparse import save_npz, load_npz
-import scipy.spatial.distance as dist
-from scipy.stats import ttest_rel
-
-from nilearn import image, masking, decoding
+from nilearn import image, masking
 from nilearn._utils import check_niimg_4d, check_niimg_3d
 from nilearn.image.resampling import coord_transform
 from nilearn.input_data.nifti_spheres_masker import _apply_mask_and_get_affinity
-
-# Time and progress
 import time
 
-from nilearn.image import new_img_like
-from nilearn import plotting
+from .utils import tri_num, GroupIterator
+from .metrics import cross_vect_score
+from .rdm import check_rdm, estimate_rdms
+from .inference import compare_rdms
 
 
-def normalize_rdvs(rdvs):
-    """
-    Parameters
-    -----------
-    rdvs: 2D-array
-        Each row contain a RDV
-
-    Return
-    -------
-    2D-array with noramlized value across each row.
-    """
-    mini = np.tile(np.min(rdvs, axis=1), [rdvs.shape[1], 1]).T
-    maxi = np.tile(np.max(rdvs, axis=1), [rdvs.shape[1], 1]).T
-    # FIXME: is that the right way to take care of nan ?
-    return np.nan_to_num((rdvs - mini) / (maxi - mini))
-
-
-def rdm(X, distance='euclidean', n_jobs=1, verbose=0):
-    """
-    
-    Return
-    ======
-    rdms:
-        Nbr seed x Nbr elements
-    """
-    n_seeds = len(X)
-    
-    start_t = time.time()
-
-    # with warnings.catch_warnings():  # might not converge
-    #     warnings.simplefilter('ignore', ConvergenceWarning)
-
-    rdms = Parallel(n_jobs=n_jobs, verbose=verbose)(
-        delayed(_group_iter_rdm)(
-            X[s], distance, s + 1, n_seeds, max(0, verbose-1))
-        for s in range(n_seeds)
-    )
-
-    if verbose:
-        dt = time.time() - start_t
-        print("Elapsed time for RDMs computation: {:.01f}s".format(dt))
-    return np.array(rdms)
-
-
-def _group_iter_rdm(Xseed, distance, thread_id, total, verbose=0):
-    """ Compute RDM
-    
-    The dissimilarity can be computed with various metrics as euclidean
-    distance or spearman (pearson ranked) correlation.
-    """
-    ncond = Xseed.shape[1]
-    nvoxels = Xseed.shape[2]
-    
-    # TODO: add cross validation here ?
-    # Average all runs
-    Xmean = np.mean(Xseed, axis=0)
-    
-    if verbose:
-        print("sphere {}/{} has {} values".format(thread_id, total, n_voxels))
-
-    # Rank values for each beta to speed up the computation
-    if distance == "spearmanr":
-        Xmean = np.argsort(Xmean, axis=1)
-        distance = "pearsonr"
-
-    n_elem = tri_num(ncond-1)
-    rdm_v = np.empty((n_elem,), dtype=float)
-    i_elem = 0
-    for i in range(ncond-1):
-        for j in range(i+1, ncond):
-            rdm_v[i_elem] = cross_vect_score(Xmean[i], Xmean[j], distance)
-            i_elem += 1
-    return rdm_v
-
-#    if distance == "rank":
-#        Xmean = np.argsort(Xmean)
-#        distance = "euclidean"
-
-#    rdm_v = np.zeros(tri_num(ncond - 1), dtype=float)
-#    i_j = 0
-#    for i in range(0, ncond - 1):
-#        # TODO: FIXME: if Xmean is empty, put a return before the loop
-#        # Avoid errors on missing data
-#        if len(Xmean[i]) > 0:
-#            for j in range(i + 1, ncond):
-#                if distance == "euclidean_corrected":
-#                    rdm_v[i_j] = np.sqrt(np.sum(np.power(Xmean[i] - Xmean[j], 2))) / float(((nvoxels-1)*2))
-#                elif distance == "euclidean": 
-#                    rdm_v[i_j] = np.sqrt(np.sum(np.power(Xmean[i] - Xmean[j], 2)))
-#                elif distance == "spearmanr_dist":
-#                    if nvoxels < 3:
-#                        corr, _ = spearmanr(Xmean[i] + [0, 0], Xmean[j] + [0, 0])
-#                    else:
-#                        corr, _ = spearmanr(Xmean[i], Xmean[j])
-#                    rdm_v[i_j] = 1 - corr
-#                else:
-#                    rdm_v[i_j] = getattr(dist, distance)(Xmean[i], Xmean[j])
-#                i_j += 1
-#    
-#    return check_rdm(rdm_v, fill=fill)
-
-
-def _group_iter_compare_rdms(brain_v, model_vectors, distance, perms,
-                             seed=0, n_seeds=0, verbose=0, start_time=None):
-    """ Mesure distance between brain RDM and several model RDMs """
-
-    probas = np.zeros((len(model_vectors),), dtype=float)
-    for im in range(model_vectors.shape[0]):
-        true_score = cross_vect_score(brain_v, model_vectors[im], distance)
-
-        random_scores = np.zeros((len(perms),), dtype=float)
-        for p, perm in enumerate(perms):
-            perm_v = model_vectors[im][perm]
-            random_scores[p] = cross_vect_score(brain_v, perm_v, distance)
-
-        random_scores = np.array(random_scores)
-
-        probas[im] = (np.sum(random_scores > true_score) + 1) / len(perms)
-
-    if verbose > 0 and n_seeds > 0:
-        if seed % np.floor(n_seeds / 100) == 0:
-            if start_time:
-                per_seed = (time.time() - start_time) / (seed + 1)
-                remain = (n_seeds - seed) * per_seed
-                hours, rem = divmod(remain, 3600)
-                minutes, seconds = divmod(rem, 60)
-                remaining = "remaining {:0>2}:{:0>2}:{:05.2f} ({:05.3f}/seed)".\
-                    format(int(hours), int(minutes), seconds, per_seed)
-            else:
-                remaining = ""
-
-            print('seed {} / {}: {}\t{}'.format(seed, n_seeds, probas, remaining))
-    return probas
-
-
-def _group_iter_numerical_comparison(brain_v, masks, perms, seed=0, n_seeds=0, 
-                                     verbose=0, start_time=None):
-    probas = np.empty((len(masks),))
-    for im, mask in enumerate(masks):
-        print(len(brain_v[mask==1]), len(brain_v[mask==0]))
-        _, p = ttest_rel(brain_v[mask][:380], brain_v[mask == 0], nan_policy='omit')
-        probas[im] = p
-
-    print(p)
-    plt.figure()
-    plt.subplot(2, 1, 1)
-    plt.hist(brain_v[mask==1])
-    plt.subplot(2, 1, 2)
-    plt.hist(brain_v[mask == 0])
-    plt.show()
-
-    if verbose > 0 and n_seeds > 0:
-        if seed % np.floor(n_seeds / 100) == 0:
-            if start_time:
-                per_seed = (time.time() - start_time) / (seed + 1)
-                remain = (n_seeds - seed) * per_seed
-                hours, rem = divmod(remain, 3600)
-                minutes, seconds = divmod(rem, 60)
-                remaining = "remaining {:0>2}:{:0>2}:{:05.2f} ({:05.3f}/seed)".\
-                    format(int(hours), int(minutes), seconds, per_seed)
-            else:
-                remaining = ""
-
-            print('seed {} / {}: {}\t{}'.format(seed, n_seeds, probas, remaining))
-    return probas
-
-
-class RSA(BaseEstimator):
+class SearchLightRSA(BaseEstimator):
     """ Implement RDM computation in a searchlight loop
     
      Parameters
@@ -337,15 +158,19 @@ class RSA(BaseEstimator):
             # Indexes of all voxels included in the current sphere
             sph_indexes = A.rows[i_sph]
 
-            # Number of voxel in the current sphere
-            n_values = len(sph_indexes)
+            if len(sph_indexes) == 0:
+                # Append when no data are available around the process voxel
+                X.append(np.full((n_runs, n_conditions, 1), np.nan))
+            else:
+                # Number of voxel in the current sphere
+                n_values = len(sph_indexes)
 
-            sub_X = np.empty((n_runs, n_conditions, n_values), dtype=object)
-            for i_run, img in enumerate(imgs):
-                for i_cond in range(n_conditions):
-                    sub_X[i_run, i_cond] = masked_imgs_data[i_run][i_cond][
-                        sph_indexes]
-            X.append(sub_X)
+                sub_X = np.empty((n_runs, n_conditions, n_values), dtype=object)
+                for i_run, img in enumerate(imgs):
+                    for i_cond in range(n_conditions):
+                        sub_X[i_run, i_cond] = masked_imgs_data[i_run][i_cond][
+                            sph_indexes]
+                X.append(sub_X)
 
         if self.verbose:
             dt = time.time() - start_t
@@ -377,9 +202,9 @@ class RSA(BaseEstimator):
                                  "fMRI imgs are needed")
             self.spheres_values = spheres_values
 
-        # Gives a list of RDM as vector
-        mat = rdm(self.spheres_values, distance=self.distance,
-                  n_jobs=self.n_jobs, verbose=max(0, self.verbose-1))
+        # Estimate RDMs
+        mat = estimate_rdms(self.spheres_values, distance=self.distance,
+                            n_jobs=self.n_jobs, verbose=max(0, self.verbose-1))
         
         self.rdms = mat
         return mat
@@ -390,7 +215,7 @@ class RSA(BaseEstimator):
 
         # Compute anly the true distance
         scores = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
-            delayed(_cross_vect_score)(
+            delayed(cross_vect_score)(
                 self.rdms[s], candidate_rdm, scoring=distance)
             for s in range(n_seeds)
         )
@@ -476,8 +301,8 @@ class RSA(BaseEstimator):
                     len(models), dt))
             
             # Return Nifti images
-            return scores_imgs
-        return scores
+            return scores_imgs if len(scores_imgs) > 1 else scores_imgs[0]
+        return scores if len(scores) > 1 else scores[0]
 
     def index_image(self):
         ind_map = - np.ones(check_niimg_4d(self.ref_img).shape[:3])

@@ -1,6 +1,6 @@
 import numpy as np
 
-from sklearn.externals.joblib import Parallel, delayed, cpu_count
+from joblib import Parallel, delayed, cpu_count
 
 from scipy.spatial.distance import squareform
 from scipy.stats.mstats import spearmanr, rankdata
@@ -10,6 +10,9 @@ from scipy.stats import ttest_rel
 import matplotlib.pyplot as plt
 
 import time
+
+from .utils import root_tri_num, tri_num, GroupIterator
+from .metrics import cross_vect_score
 
 
 def nperms_indexes(nobj, nperm):
@@ -65,68 +68,108 @@ def nperms_indexes(nobj, nperm):
     return perms
 
 
-def _group_iter_compare_rdms(brain_v, model_vectors, distance, perms,
-                             seed=0, n_seeds=0, verbose=0, start_time=None):
+#def _group_iter_numerical_comparison(brain_v, masks, perms, seed=0, n_seeds=0,
+#                                     verbose=0, start_time=None):
+#    probas = np.empty((len(masks),))
+#    for im, mask in enumerate(masks):
+#        print(len(brain_v[mask==1]), len(brain_v[mask==0]))
+#        _, p = ttest_rel(brain_v[mask][:380], brain_v[mask == 0], nan_policy='omit')
+#        probas[im] = p
+
+#    print(p)
+#    plt.figure()
+#    plt.subplot(2, 1, 1)
+#    plt.hist(brain_v[mask==1])
+#    plt.subplot(2, 1, 2)
+#    plt.hist(brain_v[mask == 0])
+#    plt.show()
+
+#    if verbose > 0 and n_seeds > 0:
+#        if seed % np.floor(n_seeds / 100) == 0:
+#            if start_time:
+#                per_seed = (time.time() - start_time) / (seed + 1)
+#                remain = (n_seeds - seed) * per_seed
+#                hours, rem = divmod(remain, 3600)
+#                minutes, seconds = divmod(rem, 60)
+#                remaining = "remaining {:0>2}:{:0>2}:{:05.2f} ({:05.3f}/seed)".\
+#                    format(int(hours), int(minutes), seconds, per_seed)
+#            else:
+#                remaining = ""
+
+#            print('seed {} / {}: {}\t{}'.format(seed, n_seeds, probas, remaining))
+#    return probas
+
+
+
+#def compare_rdms(rdms, rdm_list, model_vectors, distance, perms, seed=0, n_seeds=0, verbose=0, start_time=None):
+#    """
+#    
+#    Return
+#    ======
+#    rdms:
+#        Nbr seed x Nbr elements
+#    """
+#    n_seeds = len(X)
+#    
+#    start_t = time.time()
+
+#    # with warnings.catch_warnings():  # might not converge
+#    #     warnings.simplefilter('ignore', ConvergenceWarning)
+
+#    group_iter = GroupIterator(n_seeds, n_jobs)
+#    rdms = Parallel(n_jobs=n_jobs, verbose=verbose)(
+#        delayed(_group_iter_compare_rdms)(
+#            X, seed_list, distance, thread_id, n_seeds, max(0, verbose-1))
+#        for thread_id, seed_list in enumerate(group_iter)
+#    )
+#    rdms = np.concatenate(rdms)
+
+#    if verbose:
+#        dt = time.time() - start_t
+#        print("Elapsed time for RDMs computation: {:.01f}s".format(dt))
+#    return np.array(rdms)
+
+
+def _group_iter_compare_rdms(rdms, rdm_list, model_vectors, distance, perms,
+                             verbose=0, start_time=None):
+    probas = []
+    for idx in rdm_list:
+        probas.append(
+            _compare_rdms_job(rdms[idx], model_vectors, distance, perms, 
+                              idx, len(rdms), verbose, start_time))
+    return probas
+
+
+def _compare_rdms_job(brain_v, model_vectors, distance, perms,
+                      seed=0, n_seeds=0, verbose=0, start_time=None):
     """ Mesure distance between brain RDM and several model RDMs """
 
     probas = np.zeros((len(model_vectors),), dtype=float)
     for im in range(model_vectors.shape[0]):
-        true_score = _cross_vect_score(brain_v, model_vectors[im], distance)
+        true_score = cross_vect_score(brain_v, model_vectors[im], distance)
 
         random_scores = np.zeros((len(perms),), dtype=float)
         for p, perm in enumerate(perms):
             perm_v = model_vectors[im][perm]
-            random_scores[p] = _cross_vect_score(brain_v, perm_v, distance)
+            random_scores[p] = cross_vect_score(brain_v, perm_v, distance)
 
         random_scores = np.array(random_scores)
 
         probas[im] = (np.sum(random_scores > true_score) + 1) / len(perms)
 
-    if verbose > 0 and n_seeds > 0:
-        if seed % np.floor(n_seeds / 100) == 0:
-            if start_time:
-                per_seed = (time.time() - start_time) / (seed + 1)
-                remain = (n_seeds - seed) * per_seed
-                hours, rem = divmod(remain, 3600)
-                minutes, seconds = divmod(rem, 60)
-                remaining = "remaining {:0>2}:{:0>2}:{:05.2f} ({:05.3f}/seed)".\
-                    format(int(hours), int(minutes), seconds, per_seed)
-            else:
-                remaining = ""
+#    if verbose > 0 and n_seeds > 0:
+#        if seed % np.floor(n_seeds / 100) == 0:
+#            if start_time:
+#                per_seed = (time.time() - start_time) / (seed + 1)
+#                remain = (n_seeds - seed) * per_seed
+#                hours, rem = divmod(remain, 3600)
+#                minutes, seconds = divmod(rem, 60)
+#                remaining = "remaining {:0>2}:{:0>2}:{:05.2f} ({:05.3f}/seed)".\
+#                    format(int(hours), int(minutes), seconds, per_seed)
+#            else:
+#                remaining = ""
 
-            print('seed {} / {}: {}\t{}'.format(seed, n_seeds, probas, remaining))
-    return probas
-
-
-def _group_iter_numerical_comparison(brain_v, masks, perms, seed=0, n_seeds=0,
-                                     verbose=0, start_time=None):
-    probas = np.empty((len(masks),))
-    for im, mask in enumerate(masks):
-        print(len(brain_v[mask==1]), len(brain_v[mask==0]))
-        _, p = ttest_rel(brain_v[mask][:380], brain_v[mask == 0], nan_policy='omit')
-        probas[im] = p
-
-    print(p)
-    plt.figure()
-    plt.subplot(2, 1, 1)
-    plt.hist(brain_v[mask==1])
-    plt.subplot(2, 1, 2)
-    plt.hist(brain_v[mask == 0])
-    plt.show()
-
-    if verbose > 0 and n_seeds > 0:
-        if seed % np.floor(n_seeds / 100) == 0:
-            if start_time:
-                per_seed = (time.time() - start_time) / (seed + 1)
-                remain = (n_seeds - seed) * per_seed
-                hours, rem = divmod(remain, 3600)
-                minutes, seconds = divmod(rem, 60)
-                remaining = "remaining {:0>2}:{:0>2}:{:05.2f} ({:05.3f}/seed)".\
-                    format(int(hours), int(minutes), seconds, per_seed)
-            else:
-                remaining = ""
-
-            print('seed {} / {}: {}\t{}'.format(seed, n_seeds, probas, remaining))
+#            print('seed {} / {}: {}\t{}'.format(seed, n_seeds, probas, remaining))
     return probas
 
 
@@ -170,36 +213,39 @@ def compare_rdms(brain_rdms, model_rdvs, distance='spearmanr', n_perms=1000,
         model_rdvs = rankdata(model_rdvs, axis=1)
         # Then only need to compute the pearson correlation
         distance = "pearsonr"
-    elif distance == "ttest":
-
-        # Test between values in 2 different area of the RDM
-        for im, model in enumerate(model_rdvs):
-            uvalues = np.unique(model)
-            if len(uvalues) != 2:
-                raise ValueError("Model must contain 2 different values")
-            bin_model = np.zeros(model.shape, dtype=np.uint8)
-            bin_model[model == uvalues[1]] = 1
-            model_rdvs[im] = bin_model
+#    elif distance == "ttest":
+#        # Test between values in 2 different area of the RDM
+#        for im, model in enumerate(model_rdvs):
+#            uvalues = np.unique(model)
+#            if len(uvalues) != 2:
+#                raise ValueError("Model must contain 2 different values")
+#            bin_model = np.zeros(model.shape, dtype=np.uint8)
+#            bin_model[model == uvalues[1]] = 1
+#            model_rdvs[im] = bin_model
 
     start_t = time.time()
-    if distance == "ttest":
-        # Compute the probabilities for each voxel in parallel
-        scores = Parallel(n_jobs=n_jobs, verbose=verbose)(
-            delayed(_group_iter_numerical_comparison)(
-                brain_rdms[s], model_rdvs, perms,
-                verbose=max(0, verbose-1), seed=s, n_seeds=n_seeds,
-                start_time=start_t)
-            for s in range(n_seeds)
-        )
-    else:
-        # Compute the probabilities for each voxel in parallel
-        scores = Parallel(n_jobs=n_jobs, verbose=verbose)(
-            delayed(_group_iter_compare_rdms)(
-                brain_rdms[s], model_rdvs, distance, perms,
-                verbose=max(0, verbose-1), seed=s, n_seeds=n_seeds,
-                start_time=start_t)
-            for s in range(n_seeds)
-        )
+#    if distance == "ttest":
+#        # Compute the probabilities for each voxel in parallel
+#        scores = Parallel(n_jobs=n_jobs, verbose=verbose)(
+#            delayed(_group_iter_numerical_comparison)(
+#                brain_rdms[s], model_rdvs, perms,
+#                verbose=max(0, verbose-1), seed=s, n_seeds=n_seeds,
+#                start_time=start_t)
+#            for s in range(n_seeds)
+#        )
+#    else:
+#        # Compute the probabilities for each voxel in parallel
+
+    
+    group_iter = GroupIterator(n_seeds, n_jobs)
+    scores = Parallel(n_jobs=n_jobs, verbose=verbose)(
+        delayed(_group_iter_compare_rdms)(
+            brain_rdms, rdm_list, model_rdvs, distance, perms,
+            verbose=max(0, verbose-1), start_time=start_t)
+        # for s in range(n_seeds)
+        for thread_id, rdm_list in enumerate(group_iter)
+    )
+    scores = np.concatenate(scores)
 
     if verbose:
         dt = time.time() - start_t

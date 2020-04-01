@@ -1,124 +1,127 @@
-import nibabel as nib
+"""
+    Voice Localizer RSA analysis on a subject
+    =========================================
+
+    Load singletrial beta maps of a subject. First half of them correspond to
+    voice stimuli and second half to non-voice stimuli.
+    Then compute brain RDMs in the grey matter and finally compare (permutation
+    test) those RDMs with the Voice/Non-voice model RDM.
+
+"""
+
+import os.path as op
+import nibabel as nb
 import numpy as np
-from searchlight.searchlight import RSASearchLight
-import pyrsa
-
-from scipy.spatial.distance import squareform
-
 import matplotlib.pyplot as plt
 
-import time
-from tqdm import tqdm
-import os.path as op
-from os import mkdir
-from shutil import rmtree
-from nilearn.image import resample_to_img, new_img_like
-import nilearn.plotting as nplt
+from nilearn.image import resample_to_img, concat_imgs
+from nilearn import plotting
+
+from brainrsa import SearchLightRSA
+from brainrsa.plotting import plot_rdm
+from brainrsa.utils import check_mask
 
 
-def main():
-    # Parameters
-    # ==========================================================================
-    # Global parameters
-    n_conditions = 40
-    njobs = 20
+# ******************************************************************************
+# ***** Input parameters *******************************************************
+# ******************************************************************************
+# Number of betas (to load them and also construct the model RDM)
+n_betas = 40
 
-    # RDM estimation parameters
-    radius = 2
-    roiname = "brain"
-    searchlight_thd = .7
+# Will compute brain RDMs only in grey matter
+process_mask = "/hpc/banco/cagna.b/projects/ageing/data/preprocessing/" + \
+               "sub-04/anat/c1sanlm_sub-04_T1w.nii"
+# Directory of the singletrial GLM
+beta_dir = "/hpc/banco/cagna.b/projects/ageing/data/analyses/sub-04/glm/" + \
+           "uasub-04_task-voicelocalizer_model-singletrial"
+# Where the beta value sare actually available
+data_mask = op.join(beta_dir, "mask.nii")
 
-    # Inference parameters
-    inf_distance = 'spearmanr'
-    n_perms = 100
-    inf_thd = 0.01
+# ******************************************************************************
+# ***** Compute brain RDMs in the ROI ******************************************
+# ******************************************************************************
+# List beta files of the subject
+beta_imgs = []
+for b in range(n_betas):
+    beta_imgs.append(op.join(beta_dir, "beta_{:04d}.nii".format(b+1)))
 
-    # Data paths
-    s = "sub-04"
-    sub_dir = op.join("/hpc/banco/cagna.b/projects/ageing/data/preprocessing", s)
-    glm_d = op.join(sub_dir, "glm", "ua" + s +"_task-voicelocalizer_model-singletrial")
-    mask_f = op.join(sub_dir, 'anat', s + '_brainmask.nii')
-    t1_f = op.join(sub_dir, 'anat', 'sanlm_' + s + '_T1w.nii')
-    out_d = op.join(sub_dir, 'rsa', 'ua{}_task-voicelocalizer_roi-{}_radius-{}vx'.format(s, roiname, radius))
+# Then, load all the images and put them in a new one (4D)
+beta_imgs = concat_imgs(beta_imgs)
 
-    # Initialisation
-    # ==========================================================================
-    # (Re-)initialize output directory
-    if op.isdir(out_d):
-        rmtree(out_d)
-    mkdir(out_d)
+# ******************************************************************************
+# ***** Compute brain RDMs in the ROI ******************************************
+# ******************************************************************************
+# Load the mask and check that it is binary
+data_mask = check_mask(data_mask, threshold=0.5)
 
-    # Load betas
-    # ==========================================================================
-    print("Loading beta maps")
-    # Load a beta map to get reference affine and shape
-    beta_ref = nib.load(op.join(glm_d, "beta_0001.nii"))
-    x, y, z = beta_ref.shape
+# Resample procmask to match datamask resolution
+process_mask = check_mask(
+    resample_to_img(process_mask, data_mask), 
+    threshold=0.5
+)
 
-    # Load and put all betas in a single numpy array
-    betas = np.empty((x, y, z, n_conditions))
-    for i in tqdm(range(n_conditions), ncols=60):
-        beta = nib.load(op.join(glm_d, "beta_{:04d}.nii".format(i+1)))
-        betas[:, :, :, i] = np.array(beta.dataobj)
+# Initialise the searchlight and specify where to compute the values and the 
+# radius of the spege (in milimeters)
+rsa = SearchLightRSA(
+    data_mask,
+    process_mask_img=process_mask,
+    distance='euclidean',
+    radius=6,
+    n_jobs=20,
+    verbose=2
+)
 
-    # Create mask: intersection between brain mask and GLM mask
-    # ==========================================================================
-    # Resample brain mask to match the beta maps dimensions
-    brainmask = resample_to_img(mask_f, beta_ref)
+# Compute beta distance matrix (RDMs) for each voxel of the process_mask using
+# voxels included in data_mask
+print("Start to fit brain RDMs")
+rdms = rsa.fit(beta_imgs)
 
-    # GLM mask have already the same dimension of beta maps
-    glm_mask = nib.load(op.join(glm_d, "mask.nii")).dataobj
+# Save the image that give RDM index at each voxel
+# nb.save(rsa.index_image(), indx_map)
 
-    # Compute intersection
-    mask = np.array(brainmask.dataobj)
-    mask[mask >= 0.5] = 1
-    mask[mask < 0.5] = 0
-    mask *= glm_mask
+# Save RDMs
+# np.save(dist_f, rdms)
 
-    # Save it
-    nib.save(new_img_like(brainmask, mask), op.join(out_d, "mask.nii"))
+# Compute the average RDM
+avg_rdm = np.mean(rdms, axis=0)
 
-    # Compute RDMs
-    # ==========================================================================
-    print("Init searchlight")
-    # initialise the searchlight.
-    SL = RSASearchLight(
-        mask,
-        radius=radius,
-        threshold=searchlight_thd,
-        njobs=njobs,
-        verbose=True
-    )
+# ******************************************************************************
+# ***** Compare with Voice/Non-Voice model *************************************
+# ******************************************************************************
+# Create the model RDM
+mid = int(n_betas/2)
+model = np.zeros((n_betas, n_betas))
+model[:mid, mid:] = 1
+model[mid:, :mid] = 1
 
-    print("Fit brain RDMs")
-    # Compute Brain RDMs
-    SL.fit_rsa(betas, wantreshape=False)
-    np.save(op.join(out_d, "RDMs.npy"), SL.RDM)
+# Then, do the comparison with each brain RDMs (permuatation test)
+print('start to compare brain RDMs to model RDM')
+scores_img = rsa.compare_to(model, distance="spearmanr", n_perms=100)
 
-    # Input RDMs in pyrsa framework
-    rdms = pyrsa.rdm.RDMs(np.array(SL.RDM))
-    print(rdms.get_matrices().shape)
+# Compute just the distance with the model
+#corr_img = rsa.distance_to(squareform(models[im]), distance, True)
+#save_map(corr_img, brain, dist2model_tmpl.replace("[m]", model),
+#         "Spearman ranked distance to " + model + " model")
 
-    # Load models
-    # ==========================================================================
-    # Voice vs. Non-voice model
-    mid = int(n_conditions/2)
-    vnv_model = np.zeros((n_conditions, n_conditions))
-    vnv_model[:mid, mid:] = 1
-    vnv_model[mid:, :mid] = 1
-    vnv_model = squareform(vnv_model)
+# ******************************************************************************
+# ***** Figure *****************************************************************
+# ******************************************************************************
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
-    # Onset model
-    # onsets_rdm = np.load(op.join( 'models', 'rdm_onsets_int.npy'))
+# Show the mask
+plotting.plot_roi(process_mask, data_mask, display_mode='x', cut_coords=1, 
+                  axes=axes[0, 0], title="Process mask over data mask")
 
-    # Do inference
-    # ==========================================================================
-    print('start to compare brain RDMs to model RDMs')
-    scores = compare_rdms(rdms.get_vectors(), [vnv_model], inf_distance,
-                          n_perms, verbose=True, n_jobs=njobs)
+# The average RDM
+plot_rdm(avg_rdm, "Average RDM", sigtri="lower", ax=axes[0, 1])
 
+# The model
+plot_rdm(model, "Voice/Non-voice model", sigtri="lower", ax=axes[0, 1])
 
-if __name__ == "__main__":
-    # Running this script will run the main() function
-    main()
+# And the score map
+plotting.plot_stat_map(
+    scores_img, display_mode='x', cut_coords=1, colorbar=True, axes=axes[1, 1], 
+    title="Comparison to V/NV model")
+
+plotting.show()
 
