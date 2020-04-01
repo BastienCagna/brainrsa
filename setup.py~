@@ -7,7 +7,7 @@ setup(
     name='brainrsa',
     version='',
     packages=find_packages(),
-    url='https://github.com/BastienCagna/brainrsa',
+    url='https://github.com/BastienCagna/drsa',
     license='',
     author='Bastien Cagna',
     author_email='',
