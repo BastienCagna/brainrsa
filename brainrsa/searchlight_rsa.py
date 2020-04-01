@@ -16,10 +16,10 @@ from nilearn.image.resampling import coord_transform
 from nilearn.input_data.nifti_spheres_masker import _apply_mask_and_get_affinity
 import time
 
-from .utils import tri_num, GroupIterator
+from .utils.misc import tri_num, GroupIterator
 from .metrics import cross_vect_score
 from .rdm import check_rdm, estimate_rdms
-from .inference import compare_rdms
+from .stats import compare_rdms
 
 
 class SearchLightRSA(BaseEstimator):
@@ -160,7 +160,8 @@ class SearchLightRSA(BaseEstimator):
 
             if len(sph_indexes) == 0:
                 # Append when no data are available around the process voxel
-                X.append(np.full((n_runs, n_conditions, 1), np.nan))
+                X.append(np.full((n_runs, n_conditions, 1), 0))
+                print("Empty sphere")
             else:
                 # Number of voxel in the current sphere
                 n_values = len(sph_indexes)

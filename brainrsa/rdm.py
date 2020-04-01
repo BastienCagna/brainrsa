@@ -10,35 +10,22 @@ import argparse
 import numpy as np
 import pandas as pd
 import math as m
-from sklearn.linear_model import LinearRegression, Ridge
-from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score
 from sklearn.preprocessing import normalize
-from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn.cluster import KMeans
 from sklearn.mixture import BayesianGaussianMixture
-from sklearn import manifold
-from sklearn.linear_model import Ridge
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.pipeline import make_pipeline
-from sklearn.metrics import r2_score
 from scipy.cluster.hierarchy import dendrogram, linkage
 from nilearn.image import resample_to_img, math_img
-from nilearn.masking import apply_mask, unmask
-from nilearn import plotting
+from nilearn.masking import apply_mask
 from scipy.stats.mstats import spearmanr
-from scipy.stats import f_oneway
 from scipy.spatial.distance import squareform, euclidean
+from joblib import Parallel, delayed
 
 from warnings import warn
-from tqdm import tqdm
-
+import time
 import matplotlib.pyplot as plt
-from matplotlib.ticker import IndexFormatter, FuncFormatter
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.animation import FuncAnimation
-import seaborn as sns
-sns.set(style="ticks")
 
-from .utils import root_tri_num, tri_num
+from .utils.misc import root_tri_num, tri_num, GroupIterator
+from .metrics import cross_vect_score
 
 
 def check_rdm(rdm, multiple=None, **kwargs):

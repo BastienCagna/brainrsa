@@ -38,7 +38,7 @@ from matplotlib.animation import FuncAnimation
 import seaborn as sns
 sns.set(style="ticks")
 
-from .utils import root_tri_num, tri_num
+from .utils.misc import root_tri_num, tri_num
 from .rdm import check_rdm
 
 
@@ -300,4 +300,35 @@ def plot_mds(rdm, names=None, labels=None, title="MDS 2D space", ax=None, fig=No
     ax.grid()
     ax.set_title(title)
     return fig, ax
+
+
+def plot_dist(scores, true_score, p, title=None, save=None, ax=None, fig=None,
+              two_sides=False, **kwargs):
+    if ax is None:
+        fig, ax = plt.subplots()
+    elif fig is None:
+        fig = plt.gcf()
+    
+    # Plot distrib
+    sns.distplot(scores, ax=ax, *kwargs)
+    ax.set_title(title)
+    ax.grid()
+
+    # Mark true score value
+    ax.plot([true_score, true_score], ax.get_ylim(), 'r--')
+    if two_sides:
+        ax.plot([-true_score, -true_score], ax.get_ylim(), 'r--')
+    
+    # Add text
+    xmax, ymax = ax.get_xlim()[1],ax.get_ylim()[1]
+    xtext = 1.1*true_score if true_score < 0.7*xmax else 0.5*true_score
+    ax.text(
+        xtext, ymax*0.8, 
+        "True correlation: {:0.06f}\np = {:.02f}%".format(true_score, p*100),
+        fontsize=10
+    )
+
+    if save is not None:
+        fig.savefig(save)
+    return ax
 
