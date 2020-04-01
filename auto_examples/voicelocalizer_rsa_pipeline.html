@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Voice Localizer RSA analysis on a subject &#8212; brainrsa 0.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/gallery.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/gallery-binder.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/gallery-dataframe.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../_static/js/jquery-1.12.4.min.js "></script>
+<script type="text/javascript" src="../_static/js/jquery-fix.js "></script>
+<script type="text/javascript" src="../_static/bootstrap-3.4.1/js/bootstrap.min.js "></script>
+<script type="text/javascript" src="../_static/bootstrap-sphinx.js "></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html">
+          BrainRSA</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.0.0</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="index.html">Gallery</a></li>
+                <li><a href="../api.html">API</a></li>
+                <li><a href="../tutorial.html">Tutorial</a></li>
+                <li><a href="../install.html">Installation</a></li>
+                <li><a href="https://github.com/BastienCagna/brainrsa">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"></ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">Voice Localizer RSA analysis on a subject</a></li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+              <li class="hidden-sm">
+<div id="sourcelink">
+  <a href="../_sources/auto_examples/voicelocalizer_rsa_pipeline.rst.txt"
+     rel="nofollow">Source</a>
+</div></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p>Click <a class="reference internal" href="#sphx-glr-download-auto-examples-voicelocalizer-rsa-pipeline-py"><span class="std std-ref">here</span></a>     to download the full example code</p>
+</div>
+<div class="sphx-glr-example-title section" id="voice-localizer-rsa-analysis-on-a-subject">
+<span id="sphx-glr-auto-examples-voicelocalizer-rsa-pipeline-py"></span><h1>Voice Localizer RSA analysis on a subject<a class="headerlink" href="#voice-localizer-rsa-analysis-on-a-subject" title="Permalink to this headline">¶</a></h1>
+<p>Load singletrial beta maps of a subject. First half of them correspond to
+voice stimuli and second half to non-voice stimuli.
+Then compute brain RDMs in the grey matter and finally compare (permutation
+test) those RDMs with the Voice/Non-voice model RDM.</p>
+<p class="sphx-glr-script-out">Out:</p>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>/hpc/banco/soft/anaconda3/lib/python3.7/site-packages/sklearn/externals/joblib/__init__.py:15: DeprecationWarning: sklearn.externals.joblib is deprecated in 0.21 and will be removed in 0.23. Please import this functionality directly from joblib, which can be installed with: pip install joblib. If this warning is raised when loading pickled models, you may need to re-serialize those models with scikit-learn 0.21+.
+  warnings.warn(msg, category=DeprecationWarning)
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">op</span>
+<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nb</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="kn">from</span> <span class="nn">nilearn.image</span> <span class="k">import</span> <a href="https://nilearn.github.io/modules/generated/nilearn.image.resample_to_img.html#nilearn.image.resample_to_img" title="nilearn.image.resample_to_img" class="sphx-glr-backref-module-nilearn-image sphx-glr-backref-type-py-function"><span class="n">resample_to_img</span></a><span class="p">,</span> <a href="https://nilearn.github.io/modules/generated/nilearn.image.concat_imgs.html#nilearn.image.concat_imgs" title="nilearn.image.concat_imgs" class="sphx-glr-backref-module-nilearn-image sphx-glr-backref-type-py-function"><span class="n">concat_imgs</span></a>
+<span class="kn">from</span> <span class="nn">nilearn</span> <span class="k">import</span> <span class="n">plotting</span>
+
+<span class="kn">from</span> <span class="nn">brainrsa</span> <span class="k">import</span> <span class="n">SearchLightRSA</span>
+<span class="kn">from</span> <span class="nn">brainrsa.plotting</span> <span class="k">import</span> <span class="n">plot_rdm</span>
+<span class="kn">from</span> <span class="nn">brainrsa.utils</span> <span class="k">import</span> <span class="n">check_mask</span>
+
+
+<span class="c1"># ******************************************************************************</span>
+<span class="c1"># ***** Input parameters *******************************************************</span>
+<span class="c1"># ******************************************************************************</span>
+<span class="c1"># Number of betas (to load them and also construct the model RDM)</span>
+<a href="https://docs.python.org/3/library/functions.html#int" title="builtins.int" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">n_betas</span></a> <span class="o">=</span> <span class="mi">40</span>
+
+<span class="c1"># Will compute brain RDMs only in grey matter</span>
+<span class="n">process_mask</span> <span class="o">=</span> <span class="s2">&quot;/hpc/banco/cagna.b/projects/ageing/data/preprocessing/&quot;</span> <span class="o">+</span> \
+               <span class="s2">&quot;sub-04/anat/c1sanlm_sub-04_T1w.nii&quot;</span>
+<span class="c1"># Directory of the singletrial GLM</span>
+<a href="https://docs.python.org/3/library/stdtypes.html#str" title="builtins.str" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">beta_dir</span></a> <span class="o">=</span> <span class="s2">&quot;/hpc/banco/cagna.b/projects/ageing/data/analyses/sub-04/glm/&quot;</span> <span class="o">+</span> \
+           <span class="s2">&quot;uasub-04_task-voicelocalizer_model-singletrial&quot;</span>
+<span class="c1"># Where the beta value sare actually available</span>
+<span class="n">data_mask</span> <span class="o">=</span> <a href="https://docs.python.org/3/library/os.path.html#os.path.join" title="os.path.join" class="sphx-glr-backref-module-os-path sphx-glr-backref-type-py-function"><span class="n">op</span><span class="o">.</span><span class="n">join</span></a><span class="p">(</span><a href="https://docs.python.org/3/library/stdtypes.html#str" title="builtins.str" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">beta_dir</span></a><span class="p">,</span> <span class="s2">&quot;mask.nii&quot;</span><span class="p">)</span>
+
+<span class="c1"># ******************************************************************************</span>
+<span class="c1"># ***** Compute brain RDMs in the ROI ******************************************</span>
+<span class="c1"># ******************************************************************************</span>
+<span class="c1"># List beta files of the subject</span>
+<span class="n">beta_imgs</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <a href="https://docs.python.org/3/library/functions.html#int" title="builtins.int" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">b</span></a> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><a href="https://docs.python.org/3/library/functions.html#int" title="builtins.int" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">n_betas</span></a><span class="p">):</span>
+    <span class="n">beta_imgs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><a href="https://docs.python.org/3/library/os.path.html#os.path.join" title="os.path.join" class="sphx-glr-backref-module-os-path sphx-glr-backref-type-py-function"><span class="n">op</span><span class="o">.</span><span class="n">join</span></a><span class="p">(</span><a href="https://docs.python.org/3/library/stdtypes.html#str" title="builtins.str" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">beta_dir</span></a><span class="p">,</span> <span class="s2">&quot;beta_</span><span class="si">{:04d}</span><span class="s2">.nii&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><a href="https://docs.python.org/3/library/functions.html#int" title="builtins.int" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">b</span></a><span class="o">+</span><span class="mi">1</span><span class="p">)))</span>
+
+<span class="c1"># Then, load all the images and put them in a new one (4D)</span>
+<span class="n">beta_imgs</span> <span class="o">=</span> <a href="https://nilearn.github.io/modules/generated/nilearn.image.concat_imgs.html#nilearn.image.concat_imgs" title="nilearn.image.concat_imgs" class="sphx-glr-backref-module-nilearn-image sphx-glr-backref-type-py-function"><span class="n">concat_imgs</span></a><span class="p">(</span><span class="n">beta_imgs</span><span class="p">)</span>
+
+<span class="c1"># ******************************************************************************</span>
+<span class="c1"># ***** Compute brain RDMs in the ROI ******************************************</span>
+<span class="c1"># ******************************************************************************</span>
+<span class="c1"># Load the mask and check that it is binary</span>
+<span class="n">data_mask</span> <span class="o">=</span> <span class="n">check_mask</span><span class="p">(</span><span class="n">data_mask</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+
+<span class="c1"># Resample procmask to match datamask resolution</span>
+<span class="n">process_mask</span> <span class="o">=</span> <span class="n">check_mask</span><span class="p">(</span>
+    <a href="https://nilearn.github.io/modules/generated/nilearn.image.resample_to_img.html#nilearn.image.resample_to_img" title="nilearn.image.resample_to_img" class="sphx-glr-backref-module-nilearn-image sphx-glr-backref-type-py-function"><span class="n">resample_to_img</span></a><span class="p">(</span><span class="n">process_mask</span><span class="p">,</span> <span class="n">data_mask</span><span class="p">),</span>
+    <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span>
+<span class="p">)</span>
+
+<span class="c1"># Initialise the searchlight and specify where to compute the values and the</span>
+<span class="c1"># radius of the spege (in milimeters)</span>
+<span class="n">rsa</span> <span class="o">=</span> <span class="n">SearchLightRSA</span><span class="p">(</span>
+    <span class="n">data_mask</span><span class="p">,</span>
+    <span class="n">process_mask_img</span><span class="o">=</span><span class="n">process_mask</span><span class="p">,</span>
+    <span class="n">distance</span><span class="o">=</span><span class="s1">&#39;euclidean&#39;</span><span class="p">,</span>
+    <span class="n">radius</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+    <span class="n">n_jobs</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">2</span>
+<span class="p">)</span>
+
+<span class="c1">## Compute beta distance matrix (RDMs) for each voxel of the process_mask using</span>
+<span class="c1">## voxels included in data_mask</span>
+<span class="c1">#print(&quot;Start to fit brain RDMs&quot;)</span>
+<span class="c1">#rdms = rsa.fit(beta_imgs)</span>
+
+<span class="c1">## Save the image that give RDM index at each voxel</span>
+<span class="c1">## nb.save(rsa.index_image(), indx_map)</span>
+
+<span class="c1">## Save RDMs</span>
+<span class="c1">## np.save(dist_f, rdms)</span>
+
+<span class="c1">## Compute the average RDM</span>
+<span class="c1">#avg_rdm = np.mean(rdms, axis=0)</span>
+
+<span class="c1">## ******************************************************************************</span>
+<span class="c1">## ***** Compare with Voice/Non-Voice model *************************************</span>
+<span class="c1">## ******************************************************************************</span>
+<span class="c1">## Create the model RDM</span>
+<span class="c1">#mid = int(n_betas/2)</span>
+<span class="c1">#model = np.zeros((n_betas, n_betas))</span>
+<span class="c1">#model[:mid, mid:] = 1</span>
+<span class="c1">#model[mid:, :mid] = 1</span>
+
+<span class="c1">## Then, do the comparison with each brain RDMs (permuatation test)</span>
+<span class="c1">#print(&#39;start to compare brain RDMs to model RDM&#39;)</span>
+<span class="c1">#scores_img = rsa.compare_to(model, distance=&quot;spearmanr&quot;, n_perms=100)</span>
+
+<span class="c1">## Compute just the distance with the model</span>
+<span class="c1">##corr_img = rsa.distance_to(squareform(models[im]), distance, True)</span>
+<span class="c1">##save_map(corr_img, brain, dist2model_tmpl.replace(&quot;[m]&quot;, model),</span>
+<span class="c1">##         &quot;Spearman ranked distance to &quot; + model + &quot; model&quot;)</span>
+
+<span class="c1">## ******************************************************************************</span>
+<span class="c1">## ***** Figure *****************************************************************</span>
+<span class="c1">## ******************************************************************************</span>
+<span class="c1">#fig, axes = plt.subplots(2, 2, figsize=(12, 10))</span>
+
+<span class="c1">## Show the mask</span>
+<span class="c1">#plotting.plot_roi(process_mask, data_mask, display_mode=&#39;x&#39;, cut_coords=1,</span>
+<span class="c1">#                  axes=axes[0, 0], title=&quot;Process mask over data mask&quot;)</span>
+
+<span class="c1">## The average RDM</span>
+<span class="c1">#plot_rdm(avg_rdm, &quot;Average RDM&quot;, sigtri=&quot;lower&quot;, ax=axes[0, 1])</span>
+
+<span class="c1">## The model</span>
+<span class="c1">#plot_rdm(model, &quot;Voice/Non-voice model&quot;, sigtri=&quot;lower&quot;, ax=axes[0, 1])</span>
+
+<span class="c1">## And the score map</span>
+<span class="c1">#plotting.plot_stat_map(</span>
+<span class="c1">#    scores_img, display_mode=&#39;x&#39;, cut_coords=1, colorbar=True, axes=axes[1, 1],</span>
+<span class="c1">#    title=&quot;Comparison to V/NV model&quot;)</span>
+
+<a href="https://nilearn.github.io/modules/generated/nilearn.plotting.show.html#nilearn.plotting.show" title="nilearn.plotting.show" class="sphx-glr-backref-module-nilearn-plotting sphx-glr-backref-type-py-function"><span class="n">plotting</span><span class="o">.</span><span class="n">show</span></a><span class="p">()</span>
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> ( 0 minutes  3.534 seconds)</p>
+<div class="sphx-glr-footer class sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-voicelocalizer-rsa-pipeline-py">
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/794764bb8798898bef213bfb0acffb15/voicelocalizer_rsa_pipeline.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">voicelocalizer_rsa_pipeline.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/ed1955513d3af6dff05305562b9f80aa/voicelocalizer_rsa_pipeline.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">voicelocalizer_rsa_pipeline.ipynb</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</div>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2020, BrainRSA Developers. Last updated on 2020-04-01.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>
