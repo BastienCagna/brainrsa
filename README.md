@@ -2,7 +2,7 @@
 
 Python package to perform Representational Similarity Analysis with brain images
 
-[Found the documentation here](https://github.com/BastienCagna/brainrsa.git)
+[Found the documentation here](https://bastiencagna.github.io/brainrsa)
 
 Install
 ========
