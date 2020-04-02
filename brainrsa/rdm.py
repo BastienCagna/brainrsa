@@ -58,7 +58,7 @@ def check_rdm(rdm, multiple=None, **kwargs):
         return _check_rdm(rdm, **kwargs)    
     
 
-def _check_rdm(rdm, force="matrix", sigtri="both", include_diag=False, 
+def _check_rdm(rdm, force="matrix", triangle="both", include_diag=False, 
               fill=None, norm=None, vmin=None, vmax=None):
     """
         Usefull function force the represention of the RDM to be either as 
@@ -74,8 +74,8 @@ def _check_rdm(rdm, force="matrix", sigtri="both", include_diag=False,
 
         force: "matrix" or "vector"
         
-        sigtri: "upper", "lower", "both" or None
-            If sigtri is "both", the upper and lower triangle must be redundant. 
+        triangle: "upper", "lower", "both" or None
+            If triangle is "both", the upper and lower triangle must be redundant. 
             Otherwise the upper or lower triangle is assumed to contain the
             values.
 
@@ -103,20 +103,20 @@ def _check_rdm(rdm, force="matrix", sigtri="both", include_diag=False,
 
     # If the RDM is a matrix and that she supposed to be a redeondent distance 
     # matrix, verify that upper and lower triangle are equal.
-    if sigtri == "both" and is_matrix:  
+    if triangle == "both" and is_matrix:  
         ucoords = np.triu_indices(rdm.shape[0], k=1 if not include_diag else 0)
         upper_vals = rdm[ucoords]
         lower_vals = rdm.T[ucoords]
         if not np.array_equal(upper_vals, lower_vals):
             warn(
                 "RDM matrix is supposed to be a redundant distance matrix " \
-                '(sigtri="both") but upper and lower triangles are not equal.'
+                '(triangle="both") but upper and lower triangles are not equal.'
             )
             rdm = check_rdm(rdm, "vector", None, include_diag)
             is_matrix = False
 
     if force == "matrix":
-        if rdm.dtype == float or ((not include_diag or sigtri != "both") and type(fill) == float):
+        if rdm.dtype == float or ((not include_diag or triangle != "both") and type(fill) == float):
             dtype = float
         else:
             dtype = int
@@ -134,10 +134,10 @@ def _check_rdm(rdm, force="matrix", sigtri="both", include_diag=False,
             rdm = rdm.astype(dtype)
         
         if fill is not None:
-            if sigtri == "lower":
+            if triangle == "lower":
                 ix = np.triu_indices(rdm.shape[0], k=1 if include_diag else 0)
                 rdm[ix] = fill
-            elif sigtri == "upper":
+            elif triangle == "upper":
                 ix = np.tril_indices(rdm.shape[0], k=-1 if include_diag else 0)
                 rdm[ix] = fill
             else:
@@ -148,10 +148,10 @@ def _check_rdm(rdm, force="matrix", sigtri="both", include_diag=False,
         if is_matrix:
             # Take always the upper triangle to list the values such the order
             # is the same than when going from vector to matrix
-            if sigtri == "lower":
+            if triangle == "lower":
                 rdm = rdm.T
-            elif sigtri is None:
-                warn("As sigtri=None, take values from the upper triangle to " \
+            elif triangle is None:
+                warn("As triangle=None, take values from the upper triangle to " \
                      "convert to vector form.")
             dtype = rdm.dtype
             ix = np.triu_indices(rdm.shape[0], k=1 if not include_diag else 0)
@@ -375,14 +375,14 @@ def test():
     labels = list("obj {}".format(i) for i in range(5))
     print(vect)
 
-    rdm = check_rdm(vect, force="matrix", sigtri="upper", fill=np.inf)
+    rdm = check_rdm(vect, force="matrix", triangle="upper", fill=np.inf)
     print(rdm)
 
-    print(check_rdm(rdm, force="vector", sigtri=None))
+    print(check_rdm(rdm, force="vector", triangle=None))
 
     print(check_rdm(vect, norm="lower", vmin=0, vmax=100))
 
-    vect = check_rdm(rdm, force="vector", sigtri="upper")
+    vect = check_rdm(rdm, force="vector", triangle="upper")
     print(vect)
     plot(vect, norm="upper", labels=labels, vmin=0, vmax=20, include_diag=True, title="Test RDM")
     plt.show()

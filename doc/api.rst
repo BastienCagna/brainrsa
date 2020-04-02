@@ -6,12 +6,13 @@
 API Documentation
 =================
 
-RDM (:py:mod:`brainrsa.rdm`):
+RDM (:py:mod:`brainrsa.rdm`): Estimate RDMs
 
 .. currentmodule:: brainrsa.rdm
 
 .. autosummary::
    :toctree: generated/
+
 
 
 

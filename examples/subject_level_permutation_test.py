@@ -14,7 +14,8 @@ import nibabel as nb
 import numpy as np
 import matplotlib.pyplot as plt
 
-from nilearn.image import resample_to_img, concat_imgs, new_img_like
+from scipy.stats.mstats import rankdata
+from nilearn.image import resample_to_img, concat_imgs, new_img_like, math_img
 from nilearn import plotting
 
 from brainrsa import SearchLightRSA
@@ -36,21 +37,13 @@ sub = "sub-01"
 data_mask = dataset["subjects_data"][sub]["datamask"]
 
 # ROI mask
-process_mask = dataset["subjects_data"][sub]["roi"]
+roi = check_mask(dataset["subjects_data"][sub]["roi"], threshold=.5)
+gm = check_mask(dataset["subjects_data"][sub]["graymatter"], threshold=.5)
+process_mask = math_img('(gm*roi) > 0.5', roi=roi, gm=resample_to_img(gm, roi))
 
-# Beta maps
+# Beta maps - use only one run
+beta_imgs = concat_imgs(dataset["subjects_data"][sub]["run_1"])
 n_betas = len(dataset["subjects_data"][sub]["run_1"])
-imgs = []
-for i in range(n_betas):
-    b1 = dataset["subjects_data"][sub]["run_1"][i]
-    b2 = dataset["subjects_data"][sub]["run_2"][i]
-    dt = (np.array(nb.load(b1).dataobj) + np.array(nb.load(b2).dataobj)) / 2
-    imgs.append(new_img_like(b1, dt))
-
-print("Using data of {} ({} betas)".format(sub, n_betas))
-
-# Then, load all the images and put them in a new one (4D)
-beta_imgs = concat_imgs(imgs)
 
 
 # ******************************************************************************
@@ -95,22 +88,25 @@ model[:mid, mid:] = 1
 model[mid:, :mid] = 1
 
 # Then, do the comparison with each brain RDMs (permuatation test)
+# Do it on a short number of perm for test purpose
 print('start to compare brain RDMs to model RDM')
-scores_img = rsa.compare_to(model, distance="spearmanr", n_perms=100)
+scores_img = rsa.compare_to(model, distance="spearmanr", n_perms=200)
 
 # Compute just the distance with the model
 pval, true_score, random_score = mantel_test(avg_rdm, model, 
-                                             "spearmanr", 10000)
+                                             "spearmanr", 1000)
 
 # ******************************************************************************
 # ***** Figure *****************************************************************
 # ******************************************************************************
 fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 # The average RDM
-plot_rdm(avg_rdm, "Average RDM", sigtri="lower", ax=axes[0, 0])
+plot_rdm(avg_rdm, "Average RDM", triangle="lower", ax=axes[0, 0],
+         cblabel="Euclidean distance")
 
 # The model
-plot_rdm(model, "Voice/Non-voice model", sigtri="lower", ax=axes[0, 1])
+plot_rdm(model, "Voice/Non-voice model", triangle="lower", ax=axes[0, 1],
+         cblabel="Dissimilarity", discret=True)
 
 # Mantel test
 plot_dist(random_score, true_score, pval, ax=axes[1, 0],
@@ -119,7 +115,7 @@ plot_dist(random_score, true_score, pval, ax=axes[1, 0],
 # And the score map
 plotting.plot_stat_map(
     scores_img, display_mode='x', cut_coords=1, colorbar=True, axes=axes[1, 1], 
-    title="Comparison to V/NV model")
+    threshold=.001, title="Comparison to V/NV model")
 
 plot_rdm(avg_rdm, "Average RDM")
 plotting.show()

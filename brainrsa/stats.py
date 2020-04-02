@@ -69,7 +69,8 @@ def nperms_indexes(nobj, nperm):
     return perms
 
 
-def mantel_test(rdm_a, rdm_b, distance="euclidean", n_perms=1000, perms=None):
+def mantel_test(rdm_a, rdm_b, distance="euclidean", n_perms=1000, perms=None,
+                verbose=0):
     """
         Mantel permutation test between two RDMs.
 
@@ -97,11 +98,16 @@ def mantel_test(rdm_a, rdm_b, distance="euclidean", n_perms=1000, perms=None):
     if perms is None:
         perms = nperms_indexes(root_tri_num(rdm_a.shape[0]) + 1, n_perms)
 
+    if verbose > 0:
+        iterator = tqdm(enumerate(perms), total=n_perms, ascii=" -", 
+                        desc="Mantel permuation test", mininterval=0.5)
+    else:
+        iterator = enumerate(perms)
+
     # Compute score distribution using permutations
     # TODO: add parrallelization by cutting in several chunks ?
     random_scores = []
-    for p, perm in tqdm(enumerate(perms), total=n_perms, ascii=" -", 
-                        desc="Mantel permuation test", mininterval=0.5):
+    for p, perm in iterator:
         perm_v = rdm_b[perm]
         random_scores.append(cross_vect_score(rdm_a, perm_v, scoring=distance))
     random_scores = np.array(random_scores)

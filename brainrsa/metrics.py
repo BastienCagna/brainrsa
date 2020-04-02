@@ -7,11 +7,7 @@ def cross_vect_score(rdm_a, rdm_b, scoring='euclidean'):
         TODO: add doc !
     """
     if scoring == 'euclidean':
-        try:
-            score = np.mean(rdm_b - rdm_a)
-        except ZeroDivisionError:
-            print("metrics.cross_vect_score:", rdm_b, rdm_a)
-            raise ZeroDivisionError
+        score = euclidean(rdm_a, rdm_b)#np.mean(rdm_b - rdm_a)
 #    elif scoring in ['correlation', "correlation_dist"]:
 #        a = np.sqrt(np.sum(np.power(rdm_a, 2)))
 #        b = np.sqrt(np.sum(np.power(rdm_b, 2)))
