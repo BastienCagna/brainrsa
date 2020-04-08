@@ -1,26 +1,55 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+   Metrics used to compute RDMs
+
+   @author: Bastien Cagna
+"""
+
 import numpy as np
 from scipy.stats.mstats import spearmanr, pearsonr
-from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import euclidean, mahalanobis
 
-def cross_vect_score(rdm_a, rdm_b, scoring='euclidean'):
-    """
-        TODO: add doc !
+
+def cross_vect_score(vect_a, vect_b, scoring='euclidean', inv_noise_cov=None):
+    """ Use the scoring function to compute a value between two vectors
+
+    Parameters
+    ----------
+    vect_a, vect_b: vector
+        Data vectors.
+
+    scoring:
+        Scoring function in euclidean / mahalanobis / crossnobis / spearmanr /
+        pearsornr. If "spearmanr_dist", return 1 - spearmanr correlation.
+
+    inv_noise_cov: 2D array
+        Inverse of the noise covariance matrix needed for mahalanobis and
+        crossnobis scorings.
+
+    Returns
+    -------
+    score: float
+        Score value.
+        
     """
     if scoring == 'euclidean':
-        score = euclidean(rdm_a, rdm_b)#np.mean(rdm_b - rdm_a)
-#    elif scoring in ['correlation', "correlation_dist"]:
-#        a = np.sqrt(np.sum(np.power(rdm_a, 2)))
-#        b = np.sqrt(np.sum(np.power(rdm_b, 2)))
-#        score = np.dot(rdm_a, rdm_b) / (a * b)
+        score = euclidean(vect_a, vect_b)
+    elif scoring == "mahalanobis":
+        score = mahalanobis(vect_a, vect_b, inv_noise_cov)
+    elif scoring == "crossnobis":
+        raise NotImplemented("Cross validated Mahalanobis distance is not " + \
+                             "yet available")
     elif scoring in ["spearmanr", "spearmanr_dist"]:
         # Warning: ranking takes time, it's faster to input ranked vectors and
         # use pearsonr distance when doing multiple test on same vectors
-        score, _ = spearmanr(rdm_a, rdm_b)
+        score, _ = spearmanr(vect_a, vect_b)
     elif scoring == "pearsonr":
-        score, _ = pearsonr(rdm_a, rdm_b)
+        score, _ = pearsonr(vect_a, vect_b)
     else:
         raise ValueError("Unknown scoring function")
 
     if scoring[-5:] == "_dist":
         return 1 - score
     return score
+

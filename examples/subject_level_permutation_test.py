@@ -11,16 +11,18 @@
 
 import os.path as op
 import nibabel as nb
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from scipy.stats.mstats import rankdata
 from nilearn.image import resample_to_img, concat_imgs, new_img_like, math_img
 from nilearn import plotting
+from sklearn import manifold
 
 from brainrsa import SearchLightRSA
+from brainrsa.rdm import check_rdm
 from brainrsa.stats import mantel_test
-from brainrsa.plotting import plot_rdm, plot_dist
+from brainrsa.plotting import plot_rdm, plot_dist, plot_position
 from brainrsa.utils.misc import check_mask
 from brainrsa.utils import datasets
 
@@ -44,6 +46,10 @@ process_mask = math_img('(gm*roi) > 0.5', roi=roi, gm=resample_to_img(gm, roi))
 # Beta maps - use only one run
 beta_imgs = concat_imgs(dataset["subjects_data"][sub]["run_1"])
 n_betas = len(dataset["subjects_data"][sub]["run_1"])
+
+# Beta labels
+print(dataset["beta_labels"])
+labels_df =pd.read_csv(dataset["beta_labels"])
 
 
 # ******************************************************************************
@@ -96,27 +102,47 @@ scores_img = rsa.compare_to(model, distance="spearmanr", n_perms=200)
 pval, true_score, random_score = mantel_test(avg_rdm, model, 
                                              "spearmanr", 1000)
 
+
+# MDS
+seed = np.random.RandomState(seed=3)
+mds = manifold.MDS(n_components=2, max_iter=3000, eps=1e-9, 
+                   random_state=seed, dissimilarity="precomputed", n_jobs=1)
+pos_mds = mds.fit(check_rdm(avg_rdm)).embedding_
+pos_smacof, _ = manifold.smacof(check_rdm(avg_rdm), n_components=2, 
+                                random_state=seed)
+
 # ******************************************************************************
 # ***** Figure *****************************************************************
 # ******************************************************************************
-fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+fig, axes = plt.subplots(2, 3, figsize=(12, 10))
 # The average RDM
 plot_rdm(avg_rdm, "Average RDM", triangle="lower", ax=axes[0, 0],
          cblabel="Euclidean distance")
 
+# Plot 
+plot_position(pos_mds, ax=axes[0, 1],
+              title="Brain representation of stimuli in 2D space",
+              names=np.array(labels_df["beta_index"], dtype=str), 
+              labels=labels_df["label"])
+
+plot_position(pos_smacof, ax=axes[0, 2],
+              title="Brain representation of stimuli in 2D space (SMACOF)",
+              names=np.array(labels_df["beta_index"], dtype=str), 
+              labels=labels_df["label"])
+
 # The model
-plot_rdm(model, "Voice/Non-voice model", triangle="lower", ax=axes[0, 1],
+plot_rdm(model, "Voice/Non-voice model", triangle="lower", ax=axes[1, 0],
          cblabel="Dissimilarity", discret=True)
 
 # Mantel test
-plot_dist(random_score, true_score, pval, ax=axes[1, 0],
+plot_dist(random_score, true_score, pval, ax=axes[1, 1],
           title="Correlation between average and model")
 
 # And the score map
 plotting.plot_stat_map(
-    scores_img, display_mode='x', cut_coords=1, colorbar=True, axes=axes[1, 1], 
+    scores_img, display_mode='x', cut_coords=1, colorbar=True, axes=axes[1, 2],
     threshold=.001, title="Comparison to V/NV model")
 
-plot_rdm(avg_rdm, "Average RDM")
-plotting.show()
+plt.tight_layout()
+plt.show()
 

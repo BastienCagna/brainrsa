@@ -3,8 +3,7 @@
 
 """
 import numpy as np
-from sklearn import manifold
-from scipy.spatial.distance import squareform
+from scipy.spatial.distance import squareform, euclidean
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import IndexFormatter, FuncFormatter
@@ -118,57 +117,77 @@ def plot_rdm(rdm, title="", labels=None, contours=None, cnames=None,
     return fig, ax
 
 
-def animate(frame, images, subjects, ages, ax):
-    images[images==0] = np.nan
-    print("[animate frame: {}/{}]".format(frame, len(images)), end="\r")
-    img = ax.imshow(images[frame], cmap="viridis")
-    ax.text(5, 35, "age: {:02}".format(ages[frame]))
-    ax.set_title(subjects[frame])
-    return img 
+#def animate(frame, images, subjects, ages, ax):
+#    images[images==0] = np.nan
+#    print("[animate frame: {}/{}]".format(frame, len(images)), end="\r")
+#    img = ax.imshow(images[frame], cmap="viridis")
+#    ax.text(5, 35, "age: {:02}".format(ages[frame]))
+#    ax.set_title(subjects[frame])
+#    return img 
 
 
-def rdms_animation(rdms, subjects, ages, fps=25):
-    n_rdms = len(rdms)
-    rdms = np.array(list(squareform(rdms[i]) for i in range(n_rdms)))
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.imshow(rdms[0], vmin=0, vmax=1)
-    #plt.colorbar()
+#def rdms_animation(rdms, subjects, ages, fps=25):
+#    n_rdms = len(rdms)
+#    rdms = np.array(list(squareform(rdms[i]) for i in range(n_rdms)))
+#    fig, ax = plt.subplots(figsize=(8, 8))
+#    ax.imshow(rdms[0], vmin=0, vmax=1)
+#    #plt.colorbar()
 
-    animation = FuncAnimation(
-        # Your Matplotlib Figure object
-        fig,
-        # The function that does the updating of the Figure
-        animate,
-        # Frame information (here just frame number)
-        np.arange(n_rdms),
-        # Extra arguments to the animate function
-        fargs=[rdms, subjects, ages, ax],
-        # Frame-time in ms; i.e. for a given frame-rate x, 1000/x
-        interval= 1000 / fps
-    )
-    return animation
+#    animation = FuncAnimation(
+#        # Your Matplotlib Figure object
+#        fig,
+#        # The function that does the updating of the Figure
+#        animate,
+#        # Frame information (here just frame number)
+#        np.arange(n_rdms),
+#        # Extra arguments to the animate function
+#        fargs=[rdms, subjects, ages, ax],
+#        # Frame-time in ms; i.e. for a given frame-rate x, 1000/x
+#        interval= 1000 / fps
+#    )
+#    return animation
 
 
-def plot_mds(rdm, names=None, labels=None, title="MDS 2D space", ax=None, fig=None):
-    seed = np.random.RandomState(seed=3)
-    mds = manifold.MDS(n_components=2, max_iter=3000, eps=1e-9, 
-                       random_state=seed, dissimilarity="precomputed", n_jobs=1)
-    pos = mds.fit(check_rdm(rdm)).embedding_
+def plot_position(pos, names=None, labels=None, title="MDS 2D space", ax=None, 
+                  colors=None, fig=None):
+    """
+        Arguments
+        =========
+        pos: 2D array (n_samples, n_components)
+
+        names: list of str
+            Name of each object
+
+        labels: list of str
+            Label of each object
+
+        title: str or None
+
+        ax: matplotlib.pyplot.axes or None
     
+        fig: matplotlib.pyplot.figure or None
+    """
     if ax is None:
         fig, ax = plt.subplots()
     elif fig is None:
         fig = plt.gcf()
     
+    vmax = [np.max(pos[:, 0]), np.max(pos[:, 1])]
+    vmin = [np.min(pos[:, 0]), np.min(pos[:, 1])]
+    s = 300#euclidean(vmax, vmin)**2
     if labels is not None:
         ulabels = np.unique(labels)
-        cmap = plt.cm.get_cmap('Set1', len(ulabels))
+
+        if colors is None:
+            cmap = plt.cm.get_cmap('Set1', len(ulabels))
+            colors = list(cmap(i) for i in range(len(ulabels)))
+        
         for il, label in enumerate(ulabels):
             sel = labels==label
-            ax.scatter(pos[sel, 0], pos[sel, 1], color=cmap(il), label=label)
-        ax.legend()
+            ax.scatter(pos[sel, 0], pos[sel, 1], color=colors[il], label=label, s=s)
+        #ax.legend()
     else:
-        ax.scatter(pos[:, 0], pos[:, 1], color="turquoise")
+        ax.scatter(pos[:, 0], pos[:, 1], color="turquoise", s=s)
     
     if names is not None:
         for i, (x, y) in enumerate(pos):
