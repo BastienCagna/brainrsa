@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 
 from brainrsa.utils.misc import root_tri_num, tri_num, GroupIterator
 from brainrsa.metrics import cross_vect_score
+from sklearn import manifold
 # from brainrsa.plotting import plot_rdm
 
 
@@ -102,7 +103,7 @@ def _check_rdm(rdm, force="matrix", triangle="both", include_diag=False,
                 "RDM matrix is supposed to be a redundant distance matrix "
                 '(triangle="both") but upper and lower triangles are not equal.'
             )
-            rdm = check_rdm(rdm, "vector", None, include_diag)
+            rdm = _check_rdm(rdm, "vector", None, include_diag)
             is_matrix = False
 
     if force == "matrix":
@@ -247,6 +248,17 @@ def normalized_rdm(rdm, norm, vmin, vmax):
     rdm[i] = norm_rdm[i]
     return rdm
 
+
+def elements_position(rdm, ndims=2, njobs=1, max_iter=300, eps=1e-9):
+    mds = manifold.MDS(
+        n_components=2,
+        max_iter=30,
+        random_state=np.random.RandomState(seed=3),
+        eps=1e-9,
+        dissimilarity="precomputed",
+        n_jobs=njobs,
+    )
+    return mds.fit(rdm).embedding_
 
 # def age_model_rdm(participant_tsv):
 #     """
